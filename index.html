@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>川麻算番</title>
+  <style>
+    :root {
+      --ink: #193b3a;
+      --muted: #718584;
+      --line: #dce7e4;
+      --paper: #f6faf8;
+      --card: #ffffff;
+      --accent: #e2773c;
+      --accent-soft: #fff0e6;
+      --teal-soft: #e5f2ef;
+      --shadow: 0 14px 32px rgba(25, 59, 58, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; }
+    .shell { max-width: 520px; margin: 0 auto; padding: 20px 16px 32px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+    .eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+    h1 { margin: 0; font-size: 30px; line-height: 1.05; letter-spacing: 0; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+    .reset { border: 0; background: transparent; color: var(--muted); padding: 8px 0; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+    .hand-panel { padding: 16px; margin-bottom: 14px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; }
+    .panel-title { margin: 0; font-size: 15px; }
+    .count { color: var(--accent); font-size: 13px; font-weight: 700; }
+    .hand { min-height: 118px; margin-top: 12px; }
+    .hand-canvas { display: block; width: 100%; height: 118px; border: 1px solid var(--line); border-radius: 10px; background: #f7fbfa; cursor: pointer; }
+    .empty-hand { color: var(--muted); font-size: 13px; }
+    .tile { border: 0; background: transparent; color: var(--ink); cursor: pointer; }
+    .picker { padding: 16px; margin-bottom: 14px; }
+    .picker-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+    .hint { color: var(--muted); font-size: 12px; }
+    .suit + .suit { margin-top: 14px; }
+    .suit-name { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .suit-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); }
+    .suit:nth-child(2) .suit-dot { background: #4e9b88; }
+    .suit:nth-child(3) .suit-dot { background: #5c83a4; }
+    .tiles { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 7px; }
+    .tile { position: relative; aspect-ratio: 0.76; min-height: 54px; padding: 0; font-size: 14px; font-weight: 800; transition: transform .15s; }
+    .tile:active { transform: translateY(1px); }
+    .tile[disabled] { opacity: .45; cursor: not-allowed; }
+    .tile-canvas { display: block; width: 100%; height: 100%; pointer-events: none; }
+    .tile-meta { position: absolute; right: 3px; bottom: 4px; min-width: 16px; padding: 1px 3px; border-radius: 8px; color: #fff; background: rgba(25, 59, 58, .72); font-size: 9px; font-weight: 700; line-height: 14px; }
+    .red-suit { margin-top: 14px; }
+    .red-tile { color: #c9463a; }
+    .settings { padding: 16px; margin-bottom: 14px; }
+    .switches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .switch { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 13px; cursor: pointer; }
+    .switch input { accent-color: var(--accent); }
+    .kong-count { width: 52px; border: 1px solid var(--line); border-radius: 7px; padding: 4px 6px; color: var(--ink); background: #fff; text-align: center; }
+    .action { width: 100%; min-height: 50px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 800; cursor: pointer; box-shadow: 0 8px 18px rgba(226,119,60,.24); }
+    .validation { min-height: 20px; margin: 10px 0 0; color: var(--accent); font-size: 12px; }
+    .result { display: none; padding: 18px 16px; margin-top: 14px; }
+    .result.show { display: block; }
+    .result-top { display: flex; justify-content: space-between; align-items: end; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    .result-kicker { margin: 0 0 4px; color: var(--muted); font-size: 12px; }
+    .total { margin: 0; color: var(--accent); font-size: 48px; line-height: .95; }
+    .total small { font-size: 16px; }
+    .result-note { color: var(--muted); font-size: 12px; text-align: right; }
+    .multiplier { display: block; margin-bottom: 5px; color: var(--ink); font-size: 22px; }
+    .fan-list { display: grid; gap: 8px; margin: 14px 0 0; }
+    .fan-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; font-size: 14px; }
+    .fan-info { min-width: 0; }
+    .fan-explanation { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .fan-row strong { color: var(--accent); }
+    .tip { margin: 14px 0 0; padding: 10px 11px; border-radius: 9px; background: var(--accent-soft); color: #9a5a32; font-size: 12px; line-height: 1.5; }
+    .credits { margin: 18px 0 0; color: var(--muted); font-size: 10px; text-align: center; }
+    .credits a { color: inherit; }
+    @media (min-width: 480px) {
+      .shell { padding-top: 32px; }
+      .tile { min-height: 62px; font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">SICHUAN MAHJONG</p>
+        <h1>川麻算番</h1>
+        <p class="subtitle">选好最后一手牌，看看这把有几番</p>
+      </div>
+      <button class="reset" id="resetButton" type="button">清空重选</button>
+    </header>
+
+    <section class="panel hand-panel" aria-labelledby="handTitle">
+      <div class="panel-head"><h2 class="panel-title" id="handTitle">我的手牌</h2><span class="count" id="countText">0 / 14 张</span></div>
+      <div class="hand" id="handPreview"><canvas class="hand-canvas" id="handCanvas" width="480" height="118" aria-label="已选手牌预览"></canvas></div>
+    </section>
+
+    <section class="panel picker" aria-labelledby="pickerTitle">
+      <div class="picker-head"><h2 class="panel-title" id="pickerTitle">选择牌面</h2><span class="hint">同一张最多 4 张</span></div>
+      <div id="tilePicker"></div>
+    </section>
+
+    <section class="panel settings" aria-labelledby="settingsTitle">
+      <h2 class="panel-title" id="settingsTitle">这把的状态</h2>
+      <div class="switches">
+        <label class="switch">自摸 <input type="checkbox" data-option="selfDraw"></label>
+        <label class="switch">杠上花 <input type="checkbox" data-option="kongWin"></label>
+        <label class="switch">杠上炮 <input type="checkbox" data-option="kongDiscard"></label>
+        <label class="switch">抢杠胡 <input type="checkbox" data-option="robKong"></label>
+        <label class="switch">明杠 <input class="kong-count" type="number" min="0" max="4" value="0" data-kong="exposedKong"></label>
+        <label class="switch">暗杠 <input class="kong-count" type="number" min="0" max="4" value="0" data-kong="concealedKong"></label>
+        <label class="switch">回头杠 <input class="kong-count" type="number" min="0" max="4" value="0" data-kong="returnKong"></label>
+      </div>
+    </section>
+
+    <button class="action" id="calculateButton" type="button">计算番数</button>
+    <p class="validation" id="validation" role="status"></p>
+
+    <section class="panel result" id="result" aria-live="polite" aria-labelledby="resultTitle">
+      <div class="result-top">
+        <div><p class="result-kicker" id="resultTitle">这把一共</p><p class="total" id="totalText">0<small> 番</small></p></div>
+        <div class="result-note"><strong class="multiplier" id="multiplierText">0 倍</strong><span id="resultNote"></span></div>
+      </div>
+      <div class="fan-row" id="kongSummary" hidden><span>杠分</span><strong id="kongScoreText">0 分</strong></div>
+      <div class="fan-list" id="fanList"></div>
+      <p class="tip">按当前口径估算：倍数为 2 的总番数次方；四杠加一对、共 18 张牌计十八罗汉。具体封顶和地方规则请以牌局约定为准。</p>
+    </section>
+    <footer class="credits">牌面素材来自 <a href="https://github.com/FluffyStuff/riichi-mahjong-tiles" target="_blank" rel="noreferrer">riichi-mahjong-tiles</a>，采用 CC0 许可。</footer>
+  </main>
+
+  <script type="module">
+    import { calculateScore, groupTiles } from './scoring.js';
+
+    const suits = [
+      { name: '万', dot: 'wan' },
+      { name: '条', dot: 'tiao' },
+      { name: '筒', dot: 'tong' }
+    ];
+    const tiles = suits.flatMap(suit => Array.from({ length: 9 }, (_, index) => `${index + 1}${suit.name}`));
+    const selected = [];
+    const options = { selfDraw: false, kongWin: false, kongDiscard: false, robKong: false, exposedKong: 0, concealedKong: 0, returnKong: 0 };
+    const picker = document.querySelector('#tilePicker');
+    const handPreview = document.querySelector('#handPreview');
+    const countText = document.querySelector('#countText');
+    const validation = document.querySelector('#validation');
+    const result = document.querySelector('#result');
+    const totalText = document.querySelector('#totalText');
+    const fanList = document.querySelector('#fanList');
+    const resultNote = document.querySelector('#resultNote');
+    const multiplierText = document.querySelector('#multiplierText');
+    const kongSummary = document.querySelector('#kongSummary');
+    const kongScoreText = document.querySelector('#kongScoreText');
+    const handCanvas = document.querySelector('#handCanvas');
+    const handContext = handCanvas.getContext('2d');
+    const redTile = '红中';
+    let canvasTiles = [];
+    const tileAssetNames = { 红中: 'Chun.svg' };
+    const tileImages = new Map();
+    Array.from({ length: 9 }, (_, index) => index + 1).forEach(number => {
+      tileAssetNames[`${number}万`] = `Man${number}.svg`;
+      tileAssetNames[`${number}条`] = `Sou${number}.svg`;
+      tileAssetNames[`${number}筒`] = `Pin${number}.svg`;
+    });
+
+    function countOf(tile) { return selected.filter(item => item === tile).length; }
+    function kongCount() { return options.exposedKong + options.concealedKong + options.returnKong; }
+    function requiredTiles() { return 14 + kongCount(); }
+
+    function renderPicker() {
+      picker.innerHTML = suits.map(suit => `
+        <div class="suit">
+          <div class="suit-name"><span class="suit-dot"></span>${suit.name}子</div>
+          <div class="tiles">${tiles.filter(tile => tile.endsWith(suit.name)).map(tile => {
+            const count = countOf(tile);
+            return `<button class="tile${count ? ' selected' : ''}" data-tile="${tile}" type="button" ${selected.length >= requiredTiles() && !count ? 'disabled' : ''}>
+              <canvas class="tile-canvas" data-canvas-tile="${tile}" aria-hidden="true"></canvas><span class="tile-meta">${count ? `${count}/4` : '＋'}</span>
+            </button>`;
+          }).join('')}</div>
+        </div>`).join('') + `
+        <div class="suit red-suit">
+          <div class="suit-name"><span class="suit-dot" style="background:#c9463a"></span>赖子</div>
+          <div class="tiles"><button class="tile red-tile${countOf(redTile) ? ' selected' : ''}" data-tile="${redTile}" type="button" ${selected.length >= requiredTiles() && !countOf(redTile) ? 'disabled' : ''}>
+            <canvas class="tile-canvas" data-canvas-tile="${redTile}" aria-hidden="true"></canvas><span class="tile-meta">${countOf(redTile) ? `${countOf(redTile)}/4` : '＋'}</span>
+          </button></div>
+        </div>`;
+      picker.querySelectorAll('[data-tile]').forEach(button => button.addEventListener('click', () => toggleTile(button.dataset.tile)));
+      drawPickerTiles();
+    }
+
+    function drawMahjongTile(context, x, y, width, height, tile, selected = false) {
+      context.save();
+      const radius = Math.max(4, width * .13);
+      context.fillStyle = selected ? '#e4f2ef' : '#fffef9';
+      context.strokeStyle = selected ? '#238476' : '#cbd8d4';
+      context.lineWidth = selected ? 2 : 1;
+      context.beginPath();
+      context.roundRect(x + 1, y + 1, width - 2, height - 2, radius);
+      context.fill();
+      context.stroke();
+      const asset = tileImages.get(tile);
+      if (asset?.complete && asset.naturalWidth) {
+        const assetInsetX = width * .1175;
+        const assetInsetY = height * .1175;
+        context.drawImage(asset, x + assetInsetX, y + assetInsetY, width - assetInsetX * 2, height - assetInsetY * 2);
+      } else if (tile === redTile) drawRedDragon(context, x, y, width, height);
+      else if (tile.endsWith('万')) drawWanFace(context, x, y, width, height, Number(tile.slice(0, -1)));
+      else if (tile.endsWith('筒')) drawTongFace(context, x, y, width, height, Number(tile.slice(0, -1)));
+      else drawTiaoFace(context, x, y, width, height, Number(tile.slice(0, -1)));
+      context.restore();
+    }
+
+    function drawRedDragon(context, x, y, width, height) {
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.font = `900 ${Math.max(17, width * .58)}px STKaiti, KaiTi, serif`;
+      context.fillStyle = 'rgba(110, 35, 28, .18)';
+      context.fillText('中', x + width / 2 + 1, y + height * .5 + 1);
+      context.fillStyle = '#c33930';
+      context.fillText('中', x + width / 2, y + height * .5);
+    }
+
+    function drawWanFace(context, x, y, width, height, number) {
+      const numerals = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.font = `800 ${Math.max(12, width * .4)}px STKaiti, KaiTi, serif`;
+      context.fillStyle = '#253f69';
+      context.fillText(numerals[number - 1], x + width / 2, y + height * .34);
+      context.font = `900 ${Math.max(12, width * .42)}px STKaiti, KaiTi, serif`;
+      context.fillStyle = '#b83930';
+      context.fillText('萬', x + width / 2, y + height * .64);
+    }
+
+    function drawPip(context, centerX, centerY, radius, color, innerColor = '#f7f2e4') {
+      context.fillStyle = color;
+      context.beginPath();
+      context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = innerColor;
+      context.beginPath();
+      context.arc(centerX, centerY, radius * .52, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = color;
+      context.lineWidth = Math.max(1, radius * .16);
+      context.beginPath();
+      context.arc(centerX, centerY, radius * .28, 0, Math.PI * 2);
+      context.stroke();
+    }
+
+    function drawTongFace(context, x, y, width, height, number) {
+      const layouts = {
+        1: [[.5, .5]],
+        2: [[.5, .3], [.5, .69]],
+        3: [[.3, .28], [.5, .5], [.7, .72]],
+        4: [[.31, .3], [.69, .3], [.31, .68], [.69, .68]],
+        5: [[.3, .27], [.7, .27], [.5, .5], [.3, .73], [.7, .73]],
+        6: [[.31, .24], [.69, .24], [.31, .5], [.69, .5], [.31, .76], [.69, .76]],
+        7: [[.3, .23], [.7, .23], [.5, .39], [.3, .58], [.7, .58], [.3, .77], [.7, .77]],
+        8: [[.3, .2], [.7, .2], [.3, .4], [.7, .4], [.3, .61], [.7, .61], [.3, .81], [.7, .81]],
+        9: [[.25, .22], [.5, .22], [.75, .22], [.25, .5], [.5, .5], [.75, .5], [.25, .78], [.5, .78], [.75, .78]]
+      };
+      const colors = ['#2f7797', '#ba4438', '#31805d'];
+      const radius = number === 1 ? Math.min(width, height) * .2 : Math.min(width, height) * (number >= 8 ? .075 : .09);
+      layouts[number].forEach((position, index) => drawPip(context, x + width * position[0], y + height * position[1], radius, colors[index % colors.length]));
+    }
+
+    function drawBamboo(context, centerX, centerY, width, height, color) {
+      context.strokeStyle = color;
+      context.lineWidth = Math.max(1.5, width * .28);
+      context.lineCap = 'round';
+      context.beginPath();
+      context.moveTo(centerX, centerY - height / 2);
+      context.lineTo(centerX - width * .08, centerY - height * .05);
+      context.moveTo(centerX + width * .08, centerY + height * .05);
+      context.lineTo(centerX, centerY + height / 2);
+      context.stroke();
+      context.strokeStyle = 'rgba(255,255,255,.55)';
+      context.lineWidth = Math.max(1, width * .06);
+      context.beginPath();
+      context.moveTo(centerX - width * .05, centerY - height * .4);
+      context.lineTo(centerX - width * .08, centerY - height * .12);
+      context.stroke();
+    }
+
+    function drawBird(context, x, y, width, height) {
+      context.fillStyle = '#2d765d';
+      context.beginPath();
+      context.ellipse(x + width * .5, y + height * .53, width * .18, height * .2, -.35, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = '#34769a';
+      context.beginPath();
+      context.arc(x + width * .57, y + height * .34, width * .11, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = '#f0c64e';
+      context.beginPath();
+      context.moveTo(x + width * .67, y + height * .34);
+      context.lineTo(x + width * .81, y + height * .39);
+      context.lineTo(x + width * .67, y + height * .43);
+      context.fill();
+      context.strokeStyle = '#b84135';
+      context.lineWidth = Math.max(1.5, width * .06);
+      context.beginPath();
+      context.moveTo(x + width * .39, y + height * .63);
+      context.lineTo(x + width * .28, y + height * .82);
+      context.moveTo(x + width * .49, y + height * .67);
+      context.lineTo(x + width * .47, y + height * .86);
+      context.stroke();
+      context.fillStyle = '#142b35';
+      context.beginPath();
+      context.arc(x + width * .6, y + height * .32, Math.max(1, width * .025), 0, Math.PI * 2);
+      context.fill();
+    }
+
+    function drawTiaoFace(context, x, y, width, height, number) {
+      if (number === 1) {
+        drawBird(context, x, y, width, height);
+        return;
+      }
+      const layouts = {
+        2: [[.38, .34], [.62, .66]],
+        3: [[.5, .25], [.34, .65], [.66, .65]],
+        4: [[.35, .32], [.65, .32], [.35, .68], [.65, .68]],
+        5: [[.35, .27], [.65, .27], [.5, .5], [.35, .73], [.65, .73]],
+        6: [[.34, .24], [.66, .24], [.34, .5], [.66, .5], [.34, .76], [.66, .76]],
+        7: [[.32, .23], [.68, .23], [.5, .4], [.32, .58], [.68, .58], [.32, .78], [.68, .78]],
+        8: [[.34, .2], [.66, .2], [.34, .4], [.66, .4], [.34, .61], [.66, .61], [.34, .81], [.66, .81]],
+        9: [[.27, .22], [.5, .22], [.73, .22], [.27, .5], [.5, .5], [.73, .5], [.27, .78], [.5, .78], [.73, .78]]
+      };
+      const colors = ['#2c7a5d', '#b64035', '#34749a'];
+      const bambooWidth = Math.max(4, width * (number >= 8 ? .12 : .15));
+      const bambooHeight = Math.max(9, height * (number >= 8 ? .17 : .2));
+      layouts[number].forEach((position, index) => drawBamboo(context, x + width * position[0], y + height * position[1], bambooWidth, bambooHeight, colors[index % colors.length]));
+    }
+
+    function drawPickerTiles() {
+      picker.querySelectorAll('[data-canvas-tile]').forEach(canvas => {
+        const width = canvas.clientWidth || 36;
+        const height = canvas.clientHeight || 54;
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        const context = canvas.getContext('2d');
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        drawMahjongTile(context, 0, 0, width, height, canvas.dataset.canvasTile, countOf(canvas.dataset.canvasTile) > 0);
+      });
+    }
+
+    function loadTileAssets() {
+      Object.entries(tileAssetNames).forEach(([tile, filename]) => {
+        const image = new Image();
+        image.onload = () => {
+          drawPickerTiles();
+          drawHand();
+        };
+        image.onerror = () => tileImages.delete(tile);
+        tileImages.set(tile, image);
+        image.src = `./assets/mahjong/tiles/${filename}`;
+      });
+    }
+
+    function renderHand() {
+      countText.textContent = `${selected.length} / ${requiredTiles()} 张`;
+      drawHand();
+    }
+
+    function drawHand() {
+      const width = handCanvas.clientWidth || 480;
+      const ratio = window.devicePixelRatio || 1;
+      const groups = groupTiles(selected, options);
+      const tileWidth = Math.min(34, Math.max(28, (width - 24) / 8));
+      const tileHeight = tileWidth * 1.65;
+      const tileGap = 5;
+      const groupGap = 14;
+      const rowHeight = tileHeight + 28;
+      const layouts = [];
+      let cursorX = 8;
+      let cursorY = 8;
+      groups.forEach(group => {
+        const groupWidth = group.tiles.length * tileWidth + (group.tiles.length - 1) * tileGap;
+        if (cursorX > 8 && cursorX + groupWidth > width - 8) {
+          cursorX = 8;
+          cursorY += rowHeight;
+        }
+        layouts.push({ group, x: cursorX, y: cursorY, width: groupWidth });
+        cursorX += groupWidth + groupGap;
+      });
+      const canvasHeight = selected.length ? cursorY + rowHeight + 6 : 118;
+      handCanvas.style.height = `${canvasHeight}px`;
+      handCanvas.width = width * ratio;
+      handCanvas.height = canvasHeight * ratio;
+      handContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+      handContext.clearRect(0, 0, width, canvasHeight);
+      canvasTiles = [];
+      handContext.fillStyle = '#f7fbfa';
+      handContext.fillRect(0, 0, width, canvasHeight);
+      if (!selected.length) {
+        handContext.fillStyle = '#718584';
+        handContext.font = '13px Microsoft YaHei, sans-serif';
+        handContext.fillText('点击下方牌面开始选择', 14, 64);
+        return;
+      }
+      const groupColors = { 杠: '#a95b32', 大对: '#8f4a44', 顺子: '#287360', 对子: '#426d91', 赖子: '#c13f35', 散牌: '#718584' };
+      layouts.forEach(layout => {
+        handContext.fillStyle = groupColors[layout.group.type] || '#718584';
+        handContext.font = '700 10px Microsoft YaHei, sans-serif';
+        handContext.textAlign = 'left';
+        handContext.fillText(layout.group.type, layout.x + 1, layout.y + 10);
+        layout.group.tiles.forEach((tile, index) => {
+          const x = layout.x + index * (tileWidth + tileGap);
+          const y = layout.y + 16;
+          canvasTiles.push({ x, y, width: tileWidth, height: tileHeight, tile });
+          drawMahjongTile(handContext, x, y, tileWidth, tileHeight, tile);
+        });
+      });
+      handContext.textAlign = 'left';
+    }
+
+    handCanvas.addEventListener('click', event => {
+      const rect = handCanvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const tile = canvasTiles.find(item => x >= item.x && x <= item.x + item.width && y >= item.y && y <= item.y + item.height);
+      if (!tile) return;
+      selected.splice(selected.indexOf(tile.tile), 1);
+      renderPicker();
+      renderHand();
+      validation.textContent = selected.length === requiredTiles() ? '牌数已齐，可以计算。' : selected.length < requiredTiles() ? `还需要选择 ${requiredTiles() - selected.length} 张牌` : `当前多选了 ${selected.length - requiredTiles()} 张牌`;
+      result.classList.remove('show');
+    });
+
+    function toggleTile(tile, remove = false) {
+      const index = selected.indexOf(tile);
+      const count = countOf(tile);
+      if (remove && index > -1) selected.splice(index, 1);
+      else if (count < 4 && selected.length < requiredTiles()) selected.push(tile);
+      renderPicker();
+      renderHand();
+      validation.textContent = selected.length === requiredTiles() ? '牌数已齐，可以计算。' : selected.length < requiredTiles() ? `还需要选择 ${requiredTiles() - selected.length} 张牌` : `当前多选了 ${selected.length - requiredTiles()} 张牌`;
+      result.classList.remove('show');
+    }
+
+    document.querySelectorAll('[data-option]').forEach(input => input.addEventListener('change', () => {
+      options[input.dataset.option] = input.checked;
+      result.classList.remove('show');
+    }));
+
+    document.querySelectorAll('[data-kong]').forEach(input => input.addEventListener('input', () => {
+      const otherKongs = kongCount() - options[input.dataset.kong];
+      options[input.dataset.kong] = Math.max(0, Math.min(4 - otherKongs, Number(input.value) || 0));
+      input.value = options[input.dataset.kong];
+      renderPicker();
+      renderHand();
+      validation.textContent = selected.length === requiredTiles() ? '牌数已齐，可以计算。' : selected.length < requiredTiles() ? `还需要选择 ${requiredTiles() - selected.length} 张牌` : `当前多选了 ${selected.length - requiredTiles()} 张牌`;
+      result.classList.remove('show');
+    }));
+
+    document.querySelector('#calculateButton').addEventListener('click', () => {
+      const score = calculateScore(selected, options);
+      if (!score.isWin) {
+        validation.textContent = `不能胡：${score.reason}`;
+        result.classList.remove('show');
+        return;
+      }
+      totalText.innerHTML = `${score.total}<small> 番</small>`;
+      multiplierText.textContent = `${score.multiplier} 倍`;
+      fanList.innerHTML = score.items.map(item => `<div class="fan-row"><span class="fan-info"><span>${item.name}</span><small class="fan-explanation">${item.explanation}</small></span><strong>+${item.fan} 番</strong></div>`).join('');
+      kongScoreText.textContent = `${score.kongScore} 分`;
+      kongSummary.hidden = score.kongScore === 0;
+      resultNote.textContent = `${score.wildcards ? `${score.wildcards} 张赖子 · ` : ''}${score.roots ? `${score.roots} 根 · ` : ''}胡牌成立`;
+      validation.textContent = '';
+      result.classList.add('show');
+      result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    document.querySelector('#resetButton').addEventListener('click', () => {
+      selected.splice(0, selected.length);
+      Object.keys(options).forEach(key => { options[key] = false; });
+      document.querySelectorAll('[data-option]').forEach(input => { input.checked = false; });
+      Object.keys(options).filter(key => key.endsWith('Kong') && key !== 'kongWin' && key !== 'kongDiscard').forEach(key => { options[key] = 0; });
+      document.querySelectorAll('[data-kong]').forEach(input => { input.value = 0; });
+      validation.textContent = '';
+      result.classList.remove('show');
+      kongSummary.hidden = true;
+      renderPicker();
+      renderHand();
+    });
+
+    loadTileAssets();
+    renderPicker();
+    renderHand();
+    window.addEventListener('resize', () => {
+      drawPickerTiles();
+      drawHand();
+    });
+  </script>
+</body>
+</html>
