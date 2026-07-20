@@ -50,8 +50,8 @@
     .suit-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); }
     .suit:nth-child(2) .suit-dot { background: #4e9b88; }
     .suit:nth-child(3) .suit-dot { background: #5c83a4; }
-    .tiles { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 7px; }
-    .tile { position: relative; aspect-ratio: 0.76; min-height: 54px; padding: 0; font-size: 14px; font-weight: 800; transition: transform .15s; }
+    .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+    .tile { position: relative; min-width: 0; aspect-ratio: 0.76; padding: 0; font-size: 14px; font-weight: 800; transition: transform .15s; }
     .tile:active { transform: translateY(1px); }
     .tile[disabled] { opacity: .45; cursor: not-allowed; }
     .tile-canvas { display: block; width: 100%; height: 100%; pointer-events: none; }
@@ -81,8 +81,9 @@
     .tip { margin: 14px 0 0; padding: 10px 11px; border-radius: 9px; background: var(--accent-soft); color: #9a5a32; font-size: 12px; line-height: 1.5; }
     .credits { margin: 18px 0 0; color: var(--muted); font-size: 10px; text-align: center; }
     .credits a { color: inherit; }
-    @media (min-width: 480px) {
+    @media (min-width: 501px) {
       .shell { padding-top: 32px; }
+      .tiles { grid-template-columns: repeat(9, minmax(0, 1fr)); }
       .tile { min-height: 62px; font-size: 16px; }
     }
   </style>
@@ -375,10 +376,11 @@
       const width = handCanvas.clientWidth || 480;
       const ratio = window.devicePixelRatio || 1;
       const groups = groupTiles(selected, options);
-      const tileWidth = Math.min(34, Math.max(28, (width - 24) / 8));
-      const tileHeight = tileWidth * 1.65;
-      const tileGap = 5;
-      const groupGap = 14;
+      const pickerTile = picker.querySelector('.tile-canvas');
+      const tileWidth = pickerTile?.clientWidth || 36;
+      const tileHeight = pickerTile?.clientHeight || 54;
+      const tileGap = 3;
+      const groupGap = 4;
       const rowHeight = tileHeight + 28;
       const layouts = [];
       let cursorX = 8;
