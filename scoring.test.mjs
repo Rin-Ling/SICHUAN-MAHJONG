@@ -185,6 +185,24 @@ test('无效牌型不会获得基础胡和倍数', () => {
   assert.deepEqual(result.items, []);
 });
 
+test('海底捞月单独增加一番', () => {
+  const result = calculateScore(standardWin, { lastTileDraw: true });
+  assert.equal(result.items.some(item => item.name === '海底捞月'), true);
+  assert.equal(result.total, 2);
+});
+
+test('海底捞月可与自摸叠加', () => {
+  const result = calculateScore(standardWin, { selfDraw: true, lastTileDraw: true });
+  assert.deepEqual(result.items.slice(-2).map(item => item.name), ['自摸', '海底捞月']);
+  assert.equal(result.total, 3);
+});
+
+test('无效牌型不计海底捞月', () => {
+  const result = calculateScore(standardWin.slice(0, 13), { lastTileDraw: true });
+  assert.equal(result.total, 0);
+  assert.deepEqual(result.items, []);
+});
+
 test('胡牌组合优先展示杠大对顺子对子赖子', () => {
   const grouped = groupTiles(['1万', '1万', '1万', '1万', '2条', '2条', '2条', '3筒', '4筒', '5筒', '6万', '6万', '红中', '红中']);
   assert.deepEqual(grouped.map(group => group.type), ['杠', '大对', '顺子', '对子', '赖子']);

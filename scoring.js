@@ -264,6 +264,7 @@ export function calculateScore(tiles, options = {}) {
 
   const optionItems = [
     ['selfDraw', '自摸', '胡牌牌张由自己摸到。'],
+    ['lastTileDraw', '海底捞月', '摸到牌墙最后一张牌并胡牌。'],
     ['kongWin', '杠上花', '开杠补牌后，补到的牌正好胡牌。'],
     ['kongDiscard', '杠上炮', '开杠补牌后打出的牌被其他玩家胡走。'],
     ['robKong', '抢杠胡', '其他玩家补杠时，用该牌完成胡牌。']
