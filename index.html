@@ -117,6 +117,11 @@
         <label class="switch">杠上花 <input type="checkbox" data-option="kongWin"></label>
         <label class="switch">杠上炮 <input type="checkbox" data-option="kongDiscard"></label>
         <label class="switch">抢杠胡 <input type="checkbox" data-option="robKong"></label>
+        <label class="switch">金钩钓（四组已碰／杠） <input type="checkbox" data-option="goldHook"></label>
+        <label class="switch">门清 <input type="checkbox" data-option="concealedHand"></label>
+        <label class="switch">启用中张加番 <input type="checkbox" data-option="middleTiles"></label>
+        <label class="switch">天胡 <input type="checkbox" data-option="heavenlyWin"></label>
+        <label class="switch">地胡 <input type="checkbox" data-option="earthlyWin"></label>
         <label class="switch">明杠 <input class="kong-count" type="number" min="0" max="4" value="0" data-kong="exposedKong"></label>
         <label class="switch">暗杠 <input class="kong-count" type="number" min="0" max="4" value="0" data-kong="concealedKong"></label>
         <label class="switch">回头杠 <input class="kong-count" type="number" min="0" max="4" value="0" data-kong="returnKong"></label>
@@ -133,7 +138,7 @@
       </div>
       <div class="fan-row" id="kongSummary" hidden><span>杠分</span><strong id="kongScoreText">0 分</strong></div>
       <div class="fan-list" id="fanList"></div>
-      <p class="tip">按当前口径估算：倍数为 2 的总番数次方；四杠加一对、共 18 张牌计十八罗汉。具体封顶和地方规则请以牌局约定为准。</p>
+      <p class="tip">请录入包含已碰、已杠在内的完整手牌。基础胡 0 番、1 倍，每加 1 番翻倍；清一色 2 番，大对子 1 番，将对 3 番（替代大对子），带幺九 2 番；七对 2 番，每根加 1 番，龙七对不重复计根。金钩钓额外加 1 番，门清和启用后的中张各 1 番，天胡、地胡各 3 番。清对、清七对、清龙七对、清幺九及清／将金钩钓按对应项目叠加。九莲宝灯 6 番叠加清一色共 8 番、256 倍，不计根，不使用红中、不含杠，需自行确认门清；十八罗汉 6 番。金钩钓、门清、天胡、地胡由用户确认，地方规则和封顶以牌局约定为准。</p>
     </section>
     <footer class="credits">牌面素材来自 <a href="https://github.com/FluffyStuff/riichi-mahjong-tiles" target="_blank" rel="noreferrer">riichi-mahjong-tiles</a>，采用 CC0 许可。</footer>
   </main>

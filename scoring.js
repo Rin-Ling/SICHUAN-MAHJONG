@@ -63,7 +63,7 @@ function findSevenPairsGroups(tileCounts, wildcardCount) {
   return { groups, luxurious };
 }
 
-function findMeldGroups(tileCounts, wildcardCount, failedStates) {
+function findMeldGroups(tileCounts, wildcardCount, failedStates, terminals = false) {
   const firstIndex = tileCounts.findIndex(count => count > 0);
   if (firstIndex === -1) {
     if (wildcardCount % 3 !== 0) return null;
@@ -76,18 +76,20 @@ function findMeldGroups(tileCounts, wildcardCount, failedStates) {
 
   const sameTileCount = Math.min(3, tileCounts[firstIndex]);
   const tripletWildcards = 3 - sameTileCount;
-  if (tripletWildcards <= wildcardCount) {
+  if (tripletWildcards <= wildcardCount && (!terminals || firstIndex % 9 === 0 || firstIndex % 9 === 8)) {
     const nextCounts = [...tileCounts];
     nextCounts[firstIndex] -= sameTileCount;
-    const remainingGroups = findMeldGroups(nextCounts, wildcardCount - tripletWildcards, failedStates);
+    const remainingGroups = findMeldGroups(nextCounts, wildcardCount - tripletWildcards, failedStates, terminals);
     if (remainingGroups) {
       return [{ type: '大对', tiles: [...Array.from({ length: sameTileCount }, () => tile), ...Array.from({ length: tripletWildcards }, () => '红中')] }, ...remainingGroups];
     }
   }
 
   const suitPosition = firstIndex % 9;
-  if (suitPosition <= 6) {
-    const sequenceIndexes = [firstIndex, firstIndex + 1, firstIndex + 2];
+  for (let start = Math.max(0, suitPosition - 2); start <= Math.min(6, suitPosition); start += 1) {
+    if (terminals && start !== 0 && start !== 6) continue;
+    const sequenceStart = firstIndex - suitPosition + start;
+    const sequenceIndexes = [sequenceStart, sequenceStart + 1, sequenceStart + 2];
     const nextCounts = [...tileCounts];
     const sequenceTiles = [];
     let neededWildcards = 0;
@@ -101,7 +103,7 @@ function findMeldGroups(tileCounts, wildcardCount, failedStates) {
       }
     });
     if (neededWildcards <= wildcardCount) {
-      const remainingGroups = findMeldGroups(nextCounts, wildcardCount - neededWildcards, failedStates);
+      const remainingGroups = findMeldGroups(nextCounts, wildcardCount - neededWildcards, failedStates, terminals);
       if (remainingGroups) return [{ type: '顺子', tiles: sequenceTiles }, ...remainingGroups];
     }
   }
@@ -110,32 +112,45 @@ function findMeldGroups(tileCounts, wildcardCount, failedStates) {
   return null;
 }
 
-function findStandardGroups(tileCounts, wildcardCount) {
+function findStandardGroups(tileCounts, wildcardCount, terminals = false) {
+  let groups = null;
   for (let index = 0; index < tileCounts.length; index += 1) {
-    if (tileCounts[index] >= 2) {
+    if (tileCounts[index] >= 2 && (!terminals || index % 9 === 0 || index % 9 === 8)) {
       const nextCounts = [...tileCounts];
       nextCounts[index] -= 2;
-      const melds = findMeldGroups(nextCounts, wildcardCount, new Set());
-      if (melds) return [...melds, { type: '对子', tiles: [TILE_NAMES[index], TILE_NAMES[index]] }];
+      const melds = findMeldGroups(nextCounts, wildcardCount, new Set(), terminals);
+      if (melds) {
+        const candidate = [...melds, { type: '对子', tiles: [TILE_NAMES[index], TILE_NAMES[index]] }];
+        if (melds.every(group => group.type === '大对')) return candidate;
+        if (!groups) groups = candidate;
+      }
     }
   }
 
   if (wildcardCount >= 1) {
     for (let index = 0; index < tileCounts.length; index += 1) {
-      if (tileCounts[index] >= 1) {
+      if (tileCounts[index] >= 1 && (!terminals || index % 9 === 0 || index % 9 === 8)) {
         const nextCounts = [...tileCounts];
         nextCounts[index] -= 1;
-        const melds = findMeldGroups(nextCounts, wildcardCount - 1, new Set());
-        if (melds) return [...melds, { type: '对子', tiles: [TILE_NAMES[index], '红中'] }];
+        const melds = findMeldGroups(nextCounts, wildcardCount - 1, new Set(), terminals);
+        if (melds) {
+          const candidate = [...melds, { type: '对子', tiles: [TILE_NAMES[index], '红中'] }];
+          if (melds.every(group => group.type === '大对')) return candidate;
+          if (!groups) groups = candidate;
+        }
       }
     }
   }
 
   if (wildcardCount >= 2) {
-    const melds = findMeldGroups([...tileCounts], wildcardCount - 2, new Set());
-    if (melds) return [...melds, { type: '对子', tiles: ['红中', '红中'] }];
+    const melds = findMeldGroups([...tileCounts], wildcardCount - 2, new Set(), terminals);
+    if (melds) {
+      const candidate = [...melds, { type: '对子', tiles: ['红中', '红中'] }];
+      if (melds.every(group => group.type === '大对')) return candidate;
+      if (!groups) groups = candidate;
+    }
   }
-  return null;
+  return groups;
 }
 
 function findEighteenLuohan(counts, wildcardCount) {
@@ -183,11 +198,21 @@ export function analyzeHand(tiles, options = {}) {
   if (suits.size === 3) {
     return { isWin: false, reason: '四川麻将胡牌必须缺一门，当前万、条、筒三门齐全。', requiredTiles, groups: [], suits: [...suits], wildcards: wildcardCount, specials: {} };
   }
+  if ((options.heavenlyWin && options.earthlyWin) || (options.concealedHand && (Number(options.exposedKong) > 0 || Number(options.returnKong) > 0 || options.goldHook))) {
+    return { isWin: false, reason: '天胡与地胡不能同时选择；门清不能与明杠、回头杠或金钩钓同时选择。', requiredTiles, groups: [], suits: [...suits], wildcards: wildcardCount, specials: {} };
+  }
+  if ((options.selfDraw || options.lastTileDraw || options.kongWin) && (options.kongDiscard || options.robKong)
+    || (options.kongDiscard && options.robKong)
+    || (options.heavenlyWin && (totalKongs > 0 || options.goldHook || options.lastTileDraw || options.kongWin || options.kongDiscard || options.robKong))
+    || (options.earthlyWin && (totalKongs > 0 || options.goldHook || options.lastTileDraw || options.kongWin || options.kongDiscard || options.robKong))) {
+    return { isWin: false, reason: '胡牌状态冲突：自摸类状态不能与杠上炮、抢杠胡并选；杠上炮与抢杠胡互斥；天胡、地胡不能与杠牌、金钩钓或海底及杠胡事件并选。', requiredTiles, groups: [], suits: [...suits], wildcards: wildcardCount, specials: {} };
+  }
 
   if (totalKongs === 4) {
     const luohanGroups = findEighteenLuohan(counts, wildcardCount);
     if (luohanGroups) {
-      return { isWin: true, reason: '', requiredTiles, groups: luohanGroups, suits: [...suits], wildcards: wildcardCount, specials: { eighteenLuohan: true, sevenPairs: false, luxuriousSevenPairs: false, allTriplets: false } };
+      const allTerminals = luohanGroups.every(group => group.tiles.some(tile => tile[0] === '1' || tile[0] === '9'));
+      return { isWin: true, reason: '', requiredTiles, groups: luohanGroups, suits: [...suits], wildcards: wildcardCount, specials: { eighteenLuohan: true, sevenPairs: false, luxuriousSevenPairs: false, allTriplets: false, allTerminals } };
     }
   }
 
@@ -197,30 +222,51 @@ export function analyzeHand(tiles, options = {}) {
   }
 
   const kongChoices = totalKongs === 0 ? [[]] : choose(availableKongs, totalKongs);
+  const candidates = [];
   for (const kongTiles of kongChoices) {
     const tileCounts = TILE_NAMES.map(tile => counts[tile] || 0);
     kongTiles.forEach(tile => { tileCounts[TILE_INDEX[tile]] = 0; });
     const kongGroups = kongTiles.map(tile => ({ type: '杠', tiles: [tile, tile, tile, tile] }));
 
-    if (totalKongs === 0) {
+    if (totalKongs === 0 && !options.goldHook) {
       const sevenPairs = findSevenPairsGroups(tileCounts, wildcardCount);
       if (sevenPairs) {
-        return { isWin: true, reason: '', requiredTiles, groups: sevenPairs.groups, suits: [...suits], wildcards: wildcardCount, specials: { eighteenLuohan: false, sevenPairs: true, luxuriousSevenPairs: sevenPairs.luxurious, allTriplets: false } };
+        candidates.push({ isWin: true, reason: '', requiredTiles, groups: sevenPairs.groups, suits: [...suits], wildcards: wildcardCount, specials: { eighteenLuohan: false, sevenPairs: true, luxuriousSevenPairs: sevenPairs.luxurious, allTriplets: false } });
       }
     }
 
-    const standardGroups = findStandardGroups(tileCounts, wildcardCount);
-    if (standardGroups) {
+    const terminalGroups = kongTiles.every(tile => tile[0] === '1' || tile[0] === '9') ? findStandardGroups(tileCounts, wildcardCount, true) : null;
+    for (const standardGroups of [terminalGroups, findStandardGroups(tileCounts, wildcardCount)]) {
+      if (!standardGroups) continue;
       const allTriplets = standardGroups.filter(group => group.type !== '对子').every(group => group.type === '大对');
-      return { isWin: true, reason: '', requiredTiles, groups: [...kongGroups, ...standardGroups], suits: [...suits], wildcards: wildcardCount, specials: { eighteenLuohan: false, sevenPairs: false, luxuriousSevenPairs: false, allTriplets } };
+      if (options.goldHook && !allTriplets) continue;
+      const nineGates = !options.goldHook && totalKongs === 0 && wildcardCount === 0 && suits.size === 1
+        && Array.from({ length: 9 }, (_, index) => (counts[`${index + 1}${[...suits][0]}`] || 0) >= (index === 0 || index === 8 ? 3 : 1)).every(Boolean);
+      candidates.push({ isWin: true, reason: '', requiredTiles, groups: [...kongGroups, ...standardGroups], suits: [...suits], wildcards: wildcardCount, specials: { eighteenLuohan: false, sevenPairs: false, luxuriousSevenPairs: false, allTriplets, nineGates, allTerminals: standardGroups === terminalGroups } });
     }
   }
+  if (candidates.length > 0) {
+    let best = candidates[0];
+    let bestTotal = scoreAnalysis(tiles, options, best).total;
+    for (const candidate of candidates.slice(1)) {
+      const total = scoreAnalysis(tiles, options, candidate).total;
+      if (total > bestTotal) {
+        best = candidate;
+        bestTotal = total;
+      }
+    }
+    return best;
+  }
 
-  return { isWin: false, reason: '当前牌型不能组成四组牌和一对将，暂时不能胡牌。', requiredTiles, groups: [], suits: [...suits], wildcards: wildcardCount, specials: {} };
+  return { isWin: false, reason: options.goldHook ? '金钩钓需要四组已碰出或杠出的刻子／杠及一对将，请检查手牌和状态。' : '当前牌型不能组成四组牌和一对将，暂时不能胡牌。', requiredTiles, groups: [], suits: [...suits], wildcards: wildcardCount, specials: {} };
 }
 
 export function calculateScore(tiles, options = {}) {
   const analysis = analyzeHand(tiles, options);
+  return scoreAnalysis(tiles, options, analysis);
+}
+
+function scoreAnalysis(tiles, options, analysis) {
   const counts = createCounts(tiles);
   const kongItems = [
     ['exposedKong', '明杠', 1],
@@ -234,35 +280,47 @@ export function calculateScore(tiles, options = {}) {
     return { ...analysis, total: 0, multiplier: 0, roots: 0, items: [], kongScore, kongDetails };
   }
 
-  const items = [{ name: '基础胡', fan: 1, explanation: '手牌已经组成合法胡牌结构。' }];
-  let total = 1;
+  const items = [{ name: '基础胡', fan: 0, explanation: '手牌已经组成合法胡牌结构，基础胡不加番。' }];
+  const roots = Object.entries(counts).filter(([tile, count]) => tile !== '红中' && count === 4).length;
+  const jiangTiles = tiles.every(tile => tile === '红中' || '258'.includes(tile[0]));
+  let total = 0;
+  if (analysis.specials.nineGates) {
+    items.push({ name: '九莲宝灯', fan: 6, explanation: '同一花色的 1112345678999 加任意一张同花色牌，不使用红中、不含杠；计 6 番，叠加清一色，不重复计根。' });
+    total += 6;
+  }
   if (analysis.suits.length === 1) {
     items.push({ name: '清一色', fan: 2, explanation: '除赖子外，所有牌都属于同一种花色。' });
     total += 2;
   }
-  if (analysis.specials.luxuriousSevenPairs) {
-    items.push({ name: '豪华七对', fan: 4, explanation: '七对中包含一组四张相同牌，四张可拆成两个对子。' });
-    total += 4;
-  } else if (analysis.specials.sevenPairs) {
-    items.push({ name: '七对', fan: 2, explanation: '14 张牌由 7 个对子组成，赖子可补成对子。' });
-    total += 2;
+  if (analysis.specials.sevenPairs) {
+    const name = ['七对', '龙七对', '双龙七对', '三龙七对'][roots];
+    items.push({ name, fan: 2 + roots, explanation: `七对基础 2 番，包含 ${roots} 根，每根加 1 番，不再重复计根。` });
+    total += 2 + roots;
   }
   if (analysis.specials.eighteenLuohan) {
     items.push({ name: '十八罗汉', fan: 6, explanation: '四个杠加一对将牌，共 18 张牌。' });
     total += 6;
   }
-  if (analysis.specials.allTriplets) {
+  if (jiangTiles && (analysis.specials.allTriplets || analysis.specials.eighteenLuohan)) {
+    items.push({ name: '将对', fan: 3, explanation: '全部由 2、5、8 组成的刻子或杠及将牌，替代普通大对子计番。' });
+    total += 3;
+  } else if (analysis.specials.allTriplets) {
     items.push({ name: '大对子', fan: 1, explanation: '除一对将牌外，其余组合全部是刻子或杠，没有顺子。' });
     total += 1;
   }
 
-  const roots = Object.entries(counts).filter(([tile, count]) => tile !== '红中' && count === 4).length;
-  if (roots > 0) {
+  if (analysis.specials.allTerminals) {
+    items.push({ name: '带幺九', fan: 2, explanation: '每组顺子、刻子、杠和将牌均含 1 或 9，顺子仅为 123 或 789。' });
+    total += 2;
+  }
+  if (roots > 0 && !analysis.specials.nineGates && !analysis.specials.sevenPairs) {
     items.push({ name: '根', fan: roots, explanation: `手牌中有 ${roots} 组四张相同牌，每组计一根。` });
     total += roots;
   }
 
   const optionItems = [
+    ['goldHook', '金钩钓', '已碰出或杠出四组牌，手中只剩单钓将牌，由用户确认。'],
+    ['concealedHand', '门清', '未碰牌、未明杠或补杠；暗杠不破门清，由用户确认。'],
     ['selfDraw', '自摸', '胡牌牌张由自己摸到。'],
     ['lastTileDraw', '海底捞月', '摸到牌墙最后一张牌并胡牌。'],
     ['kongWin', '杠上花', '开杠补牌后，补到的牌正好胡牌。'],
@@ -275,6 +333,14 @@ export function calculateScore(tiles, options = {}) {
       total += 1;
     }
   });
+  if (options.middleTiles && tiles.every(tile => tile === '红中' || (tile[0] !== '1' && tile[0] !== '9'))) {
+    items.push({ name: '中张', fan: 1, explanation: '启用中张玩法，所有数牌均为 2 至 8。' });
+    total += 1;
+  }
+  if (options.heavenlyWin || options.earthlyWin) {
+    items.push({ name: options.heavenlyWin ? '天胡' : '地胡', fan: 3, explanation: options.heavenlyWin ? '庄家起手即胡，由用户确认。' : '闲家在约定的首轮条件下胡牌，由用户确认。' });
+    total += 3;
+  }
 
   return { ...analysis, total, multiplier: 2 ** total, roots, items, kongScore, kongDetails };
 }

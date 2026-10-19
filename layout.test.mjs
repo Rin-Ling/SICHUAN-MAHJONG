@@ -9,4 +9,8 @@ assert.match(html, /const pickerTile = picker\.querySelector\('\.tile-canvas'\);
 assert.match(html, /const tileGap = 3;\s*const groupGap = 4;/s, '手牌组合间距应允许两个三张组合并排');
 assert.match(html, /<label class="switch">海底捞月 <input type="checkbox" data-option="lastTileDraw"><\/label>/, '状态区应提供海底捞月开关');
 
-console.log('All 5 mobile layout tests passed');
+for (const option of ['goldHook', 'concealedHand', 'middleTiles', 'heavenlyWin', 'earthlyWin']) {
+  assert.ok(html.includes(`data-option="${option}"`), `页面应提供 ${option} 状态选项`);
+}
+
+console.log('All 10 mobile layout tests passed');
